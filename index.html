@@ -4,25 +4,318 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Will You Be My Forever? ❤️</title>
-    <!-- CSS Link -->
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ffe6e8, #ffc3a0);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Floating Background Hearts */
+        .heart-bg {
+            position: absolute;
+            color: rgba(255, 182, 193, 0.6);
+            font-size: 20px;
+            animation: float 6s ease-in infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* Top Left Secret Trigger */
+        .secret-trigger {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px;
+            height: 50px;
+            z-index: 999;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        /* Admin Console Popup */
+        .admin-console {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            width: 300px;
+            max-height: 320px;
+            background: rgba(18, 18, 24, 0.95);
+            color: #00ffcc;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            z-index: 1000;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 255, 204, 0.3);
+        }
+
+        .admin-console h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #00ffcc;
+            padding-bottom: 5px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            color: #ff4757;
+        }
+
+        .log-item {
+            font-size: 12px;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+            padding-bottom: 4px;
+        }
+
+        /* Card Container */
+        .card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            padding: 40px 30px;
+            border-radius: 25px;
+            box-shadow: 0 15px 35px rgba(230, 100, 120, 0.25);
+            text-align: center;
+            max-width: 460px;
+            width: 90%;
+            z-index: 10;
+        }
+
+        .emoji {
+            font-size: 64px;
+            margin-bottom: 15px;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        h1 {
+            color: #d85d70;
+            font-size: 28px;
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .btn-yes {
+            background-color: #ff6b81;
+            color: #ffffff;
+            box-shadow: 0 5px 15px rgba(255, 107, 129, 0.4);
+        }
+
+        .btn-yes:hover {
+            transform: translateY(-3px) scale(1.05);
+            background-color: #ff4757;
+        }
+
+        .btn-no {
+            background-color: #f1f2f6;
+            color: #747d8c;
+        }
+
+        .paragraph {
+            font-size: 16.5px;
+            line-height: 1.75;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+            animation: fadeIn 0.8s ease forwards;
+            color: #4a4a4a;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
-    <!-- Main Interactive Card -->
+    <!-- Invisible Hotspot (Top-Left) -->
+    <div class="secret-trigger" onclick="toggleConsole()"></div>
+
+    <!-- Hidden Console Window -->
+    <div class="admin-console" id="adminConsole">
+        <h3>Live Activity Log <span class="close-btn" onclick="toggleConsole()">✕</span></h3>
+        <div id="logsContainer">Click the secret corner anytime to refresh logs...</div>
+    </div>
+
+    <!-- Main Content -->
     <main class="card">
         <div class="emoji" id="emoji">💌</div>
         <h1 id="heading">Will you be my forever?</h1>
         
         <div class="btn-container" id="buttons">
-            <button class="btn btn-yes" id="yesBtn" onclick="selectYes()">Yes 💕</button>
-            <button class="btn btn-no" id="noBtn" onclick="selectNo()">No</button>
+            <button class="btn btn-yes" onclick="handleChoice('YES')">Yes 💕</button>
+            <button class="btn btn-no" onclick="handleChoice('NO')">No</button>
         </div>
 
         <p class="paragraph" id="message"></p>
     </main>
 
-    <!-- JavaScript Link -->
-    <script src="script.js"></script>
+    <script>
+        // Firebase Config with your API key
+        const firebaseConfig = {
+            apiKey: "AIzaSyDk3nh-kch9_-w_sjRsPeqrGcdJcbvNF2E",
+            authDomain: "forever-site.firebaseapp.com",
+            databaseURL: "https://forever-site-default-rtdb.firebaseio.com",
+            projectId: "forever-site"
+        };
+
+        // Initialize Firebase
+        let database;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+        } catch (e) {
+            console.log("Firebase setup note: Ensure Realtime Database is enabled in console.");
+        }
+
+        // Floating Hearts Animation
+        for (let i = 0; i < 15; i++) {
+            let heart = document.createElement('div');
+            heart.className = 'heart-bg';
+            heart.innerHTML = '💖';
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.animationDuration = (Math.random() * 3 + 4) + 's';
+            heart.style.fontSize = (Math.random() * 20 + 15) + 'px';
+            document.body.appendChild(heart);
+        }
+
+        // Toggle Secret Admin Console (Top Left Corner)
+        function toggleConsole() {
+            const consoleEl = document.getElementById('adminConsole');
+            if (consoleEl.style.display === 'block') {
+                consoleEl.style.display = 'none';
+            } else {
+                consoleEl.style.display = 'block';
+                fetchLogs();
+            }
+        }
+
+        // Handle Choice & Send Log
+        function handleChoice(choice) {
+            const timeString = new Date().toLocaleTimeString();
+            const dateString = new Date().toLocaleDateString();
+
+            // Send event to Firebase DB
+            if (database) {
+                database.ref('clicks').push({
+                    button: choice,
+                    time: timeString,
+                    date: dateString
+                });
+            }
+
+            // Also store locally as fallback
+            const localLogs = JSON.parse(localStorage.getItem('site_clicks') || '[]');
+            localLogs.push({ button: choice, time: timeString, date: dateString });
+            localStorage.setItem('site_clicks', JSON.stringify(localLogs));
+
+            // UI Update
+            const emoji = document.getElementById('emoji');
+            const heading = document.getElementById('heading');
+            const buttons = document.getElementById('buttons');
+            const message = document.getElementById('message');
+
+            buttons.style.display = 'none';
+            message.style.display = 'block';
+
+            if (choice === 'YES') {
+                emoji.innerHTML = '💖';
+                heading.innerHTML = 'You make my world complete!';
+                message.innerHTML = `You are, without a doubt, the most incredible person to ever come into my life. Every single moment with you—even the simplest ones—feels magical. You bring so much light, comfort, and warmth into my world just by being yourself. Thank you for being my favorite person, my safest space, and my absolute everything. Here is to us, forever and always. ✨🥰`;
+            } else {
+                emoji.innerHTML = '🥺';
+                heading.innerHTML = 'I understand...';
+                message.style.color = '#747d8c';
+                message.innerHTML = `I respect how you feel. Thank you for being honest with me. You'll always be special to me no matter what. 💔`;
+            }
+        }
+
+        // Fetch logs for console display
+        function fetchLogs() {
+            const logsContainer = document.getElementById('logsContainer');
+            
+            if (database) {
+                database.ref('clicks').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (!data) {
+                        logsContainer.innerHTML = 'No clicks recorded yet.';
+                        return;
+                    }
+                    logsContainer.innerHTML = '';
+                    Object.values(data).reverse().forEach(log => {
+                        const item = document.createElement('div');
+                        item.className = 'log-item';
+                        item.innerHTML = `> Clicked: <b>${log.button}</b><br><small>${log.date} at ${log.time}</small>`;
+                        logsContainer.appendChild(item);
+                    });
+                });
+            } else {
+                // Display local logs fallback
+                const localLogs = JSON.parse(localStorage.getItem('site_clicks') || '[]');
+                if (localLogs.length === 0) {
+                    logsContainer.innerHTML = 'No clicks recorded yet.';
+                } else {
+                    logsContainer.innerHTML = '';
+                    localLogs.reverse().forEach(log => {
+                        const item = document.createElement('div');
+                        item.className = 'log-item';
+                        item.innerHTML = `> Clicked: <b>${log.button}</b><br><small>${log.date} at ${log.time}</small>`;
+                        logsContainer.appendChild(item);
+                    });
+                }
+            }
+        }
+    </script>
 </body>
 </html>
